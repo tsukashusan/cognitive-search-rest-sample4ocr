@@ -1,0 +1,282 @@
+@subscription-id=<subscription-id>
+@resource-group-name=<resource-group-name>
+@cognitive-service-name=<cognitive-service-name>
+@service_name=<service_name>
+@index_name=<index_name>
+@indexer-name=<indexer-name>
+@query=$top=10
+@api_version=2021-04-30-Preview
+@api_key=<api_key>
+@api_query_key=<api_query_key>
+@skillset_name=<skillset_name>
+@data-source-name=<data-source-name>
+@cognitive-services-key=<cognitive-services-key>
+
+### スキルセットの作成
+PUT https://{{service_name}}.search.windows.net/skillsets/{{skillset_name}}?api-version={{api_version}}
+  Content-Type: application/json
+  api-key: {{api_key}}
+
+{
+  "description": "Extract text from images and merge with content text to produce merged_text",
+  "cognitiveServices": {
+    "@odata.type": "#Microsoft.Azure.Search.CognitiveServicesByKey",
+    "description": "/subscriptions/{{subscription-id}}/resourceGroups/{{resource-group-name}}/providers/Microsoft.CognitiveServices/accounts/{{cognitive-service-name}}",
+    "key": "{{cognitive-services-key}}"
+  },
+  "skills":
+  [
+    {
+      "description": "Extract text (plain and structured) from image.",
+      "@odata.type": "#Microsoft.Skills.Vision.OcrSkill",
+      "context": "/document/normalized_images/*",
+      "defaultLanguageCode": "en",
+      "detectOrientation": true,
+      "inputs": [
+        {
+          "name": "image",
+          "source": "/document/normalized_images/*"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "text"
+        }
+      ]
+    },
+    {
+      "@odata.type": "#Microsoft.Skills.Text.MergeSkill",
+      "description": "Create merged_text, which includes all the textual representation of each image inserted at the right location in the content field.",
+      "context": "/document",
+      "insertPreTag": " ",
+      "insertPostTag": " ",
+      "inputs": [
+        {
+          "name":"text",
+          "source": "/document/content"
+        },
+        {
+          "name": "itemsToInsert", 
+          "source": "/document/normalized_images/*/text"
+        },
+        {
+          "name":"offsets", 
+          "source": "/document/normalized_images/*/contentOffset"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "mergedText", 
+          "targetName" : "merged_text"
+        }
+      ]
+    }
+  ]
+}
+
+### インデックスの削除
+DELETE https://{{service_name}}.search.windows.net/indexes/{{index_name}}?api-version={{api_version}}
+  Content-Type: application/json
+  api-key: {{api_key}}
+
+### インデックスの作成
+PUT https://{{service_name}}.search.windows.net/indexes/{{index_name}}?api-version={{api_version}}
+  Content-Type: application/json
+  api-key: {{api_key}}
+
+{
+  "fields": [
+    {
+      "name": "ID",
+      "type": "Edm.String",
+      "searchable": false,
+      "filterable": true,
+      "retrievable": true,
+      "sortable": true,
+      "facetable": true,
+      "key": true,
+      "indexAnalyzer": null,
+      "searchAnalyzer": null,
+      "analyzer": null,
+      "normalizer": null,
+      "synonymMaps": []
+    },
+    {
+      "name": "content",
+      "type": "Edm.String",
+      "searchable": true,
+      "filterable": false,
+      "retrievable": true,
+      "sortable": true,
+      "facetable": true,
+      "key": false,
+      "indexAnalyzer": null,
+      "searchAnalyzer": null,
+      "analyzer": null,
+      "normalizer": null,
+      "synonymMaps": []
+    },
+    {
+      "name": "metadata_storage_name",
+      "type": "Edm.String",
+      "searchable": false,
+      "filterable": true,
+      "retrievable": true,
+      "sortable": true,
+      "facetable": true,
+      "key": false,
+      "indexAnalyzer": null,
+      "searchAnalyzer": null,
+      "analyzer": null,
+      "normalizer": null,
+      "synonymMaps": []
+    },
+    {
+      "name": "metadata_storage_size",
+      "type": "Edm.Int64",
+      "searchable": false,
+      "filterable": true,
+      "retrievable": true,
+      "sortable": true,
+      "facetable": true,
+      "key": false,
+      "indexAnalyzer": null,
+      "searchAnalyzer": null,
+      "analyzer": null,
+      "normalizer": null,
+      "synonymMaps": []
+    },
+    {
+      "name": "metadata_storage_content_type",
+      "type": "Edm.String",
+      "searchable": false,
+      "filterable": true,
+      "retrievable": true,
+      "sortable": true,
+      "facetable": true,
+      "key": false,
+      "indexAnalyzer": null,
+      "searchAnalyzer": null,
+      "analyzer": null,
+      "normalizer": null,
+      "synonymMaps": []
+    },
+    {
+      "name": "file_name",
+      "type": "Edm.String",
+      "searchable": false,
+      "filterable": true,
+      "retrievable": true,
+      "sortable": true,
+      "facetable": true,
+      "key": false,
+      "indexAnalyzer": null,
+      "searchAnalyzer": null,
+      "analyzer": null,
+      "normalizer": null,
+      "synonymMaps": []
+    },
+    {
+      "name": "url",
+      "type": "Edm.String",
+      "searchable": false,
+      "filterable": true,
+      "retrievable": true,
+      "sortable": true,
+      "facetable": true,
+      "key": false,
+      "indexAnalyzer": null,
+      "searchAnalyzer": null,
+      "analyzer": null,
+      "normalizer": null,
+      "synonymMaps": []
+    },
+    {
+      "name": "ocrText",
+      "type": "Collection(Edm.String)",
+      "facetable": false,
+      "filterable": true,
+      "key": false,
+      "retrievable": true,
+      "searchable": true,
+      "sortable": false,
+      "analyzer": "en.lucene",
+      "indexAnalyzer": null,
+      "searchAnalyzer": null,
+      "synonymMaps": [],
+      "fields": []
+    }
+  ]
+}
+
+### インデクサーのリセット
+POST https://{{service_name}}.search.windows.net/indexers/{{indexer-name}}/reset?api-version={{api_version}}
+  api-key:{{api_key}}
+
+### インデクサー作成・更新（およびフィールドマッピング）
+PUT https://{{service_name}}.search.windows.net/indexers/{{indexer-name}}?api-version={{api_version}}
+  Content-Type: application/json
+  api-key:{{api_key}}
+
+{
+  "dataSourceName" : "{{data-source-name}}",
+  "targetIndexName" : "{{index_name}}",
+  "skillsetName" : "{{skillset_name}}",
+  "fieldMappings" : [
+    {
+      "sourceFieldName": "metadata_storage_name",
+      "targetFieldName": "file_name",
+      "mappingFunction": null
+    },
+    {
+      "sourceFieldName": "metadata_storage_path",
+      "targetFieldName": "url",
+      "mappingFunction": null
+    },
+    {
+      "sourceFieldName": "metadata_storage_path",
+      "targetFieldName": "id",
+      "mappingFunction": {
+        "name": "base64Encode",
+        "parameters": {
+          "useHttpServerUtilityUrlTokenEncode": true
+        }
+      }
+    },
+    {
+        "sourceFieldName" : "content"
+    }
+  ],
+  "outputFieldMappings": [
+    {
+      "sourceFieldName": "/document/normalized_images/*/text",
+      "targetFieldName": "ocrText"
+    }
+  ],
+  "parameters":{
+    "configuration":{
+      "dataToExtract":"contentAndMetadata",
+      "parsingMode": "default",
+      "imageAction":"generateNormalizedImages"
+    }
+  }
+}
+
+### インデクサーの実行
+POST https://{{service_name}}.search.windows.net/indexers/{{indexer-name}}/run?api-version={{api_version}}
+  api-key:{{api_key}}
+### インデクサーのステータス
+GET https://{{service_name}}.search.windows.net/indexers/{{indexer-name}}/status?api-version={{api_version}}
+  api-key:{{api_key}}
+
+### 検索 (POST)
+POST https://{{service_name}}.search.windows.net/indexes/{{index_name}}/docs/search?api-version={{api_version}}
+  Content-Type: application/json
+  api-key: {{api_query_key}}
+
+{
+    "count": true,
+    "search": "*",
+    "queryType": "full" ,
+    "searchMode": "all"
+}
